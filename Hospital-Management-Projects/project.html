@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hospital Billing System</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f4f6f8;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .action-buttons button {
+      width: 49%;
+      margin-top: 10px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 15px;
+      white-space: pre-wrap;
+      border-left: 4px solid #28a745;
+      margin-top: 20px;
+      overflow-x: auto;
+      font-size: 16px;
+      line-height: 1.4;
+      border-radius: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      display: none;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    /* Bill receipt table style */
+    #billReceipt {
+      margin-top: 20px;
+      border: 2px solid #28a745;
+      border-radius: 8px;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+      display: none;
+    }
+    #billReceipt th, #billReceipt td {
+      padding: 12px 20px;
+      font-weight: bold;
+    }
+    #billReceipt th {
+      background-color: #28a745;
+      color: white;
+    }
+    #billReceipt td {
+      font-weight: normal;
+    }
+    #viewBillBtn {
+      background-color: #007bff;
+      margin-top: 15px;
+      display: none;
+    }
+    #viewBillBtn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Vidyashyala Multispeciality National Hospital</h2>
+    <h2>Hospital Patient Intake & Billing</h2>
+
+    <input type="text" id="name" placeholder="Patient Name" />
+    <input list="conditions" id="problem" placeholder="Type or select problem" />
+    <datalist id="conditions">
+        <option value="fever">
+        <option value="infections">
+        <option value="hypertension">
+        <option value="heart diseases">
+        <option value="chest pain">
+        <option value="acne">
+        <option value="eczema">
+        <option value="fungal infections">
+        <option value="menstrual issues">
+        <option value="pregnancy">
+        <option value="pcod">
+        <option value="child growth">
+        <option value="vaccination">
+        <option value="back pain">
+        <option value="fractures">
+        <option value="arthritis">
+        <option value="headaches">
+        <option value="seizures">
+        <option value="stroke">
+        <option value="diabetes">
+        <option value="thyroid">
+        <option value="hormonal disorders">
+        <option value="asthma">
+        <option value="cough">
+        <option value="breathlessness">
+        <option value="ear pain">
+        <option value="sinusitis">
+        <option value="sore throat">
+    </datalist>
+    <input type="number" id="age" placeholder="Age" />
+    <input type="number" id="op" placeholder="OP Number" />
+    <input type="text" id="date" placeholder="Date (dd/mm/yyyy)" />
+
+    <button onclick="generateReport()">Generate Report</button>
+
+    <div class="action-buttons">
+      <button onclick="showSavedPatients()" style="background-color:#007bff;">View Stored Patients</button>
+      <button onclick="clearPatients()" style="background-color:#dc3545;">Clear All Data</button>
+    </div>
+
+    <pre id="output"></pre>
+
+    <table id="patientTable">
+      <thead>
+        <tr>
+          <th>Op</th>
+          <th>Name</th>
+          <th>Problem</th>
+          <th>Age</th>
+          <th>Doctor</th>
+          <th>Specialization</th>
+          <th>Total Cost</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <table id="billReceipt">
+      <thead>
+        <tr><th colspan="2">BILL RECEIPT</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Consultation Fee</td><td id="consultFee"></td></tr>
+        <tr><td>Medicine Total</td><td id="medicineTotal"></td></tr>
+        <tr><td>GST (<span id="gstPercent"></span>%)</td><td id="gstAmount"></td></tr>
+        <tr><td><strong>TOTAL BILL</strong></td><td id="totalBill"></td></tr>
+      </tbody>
+    </table>
+
+    <button id="viewBillBtn" onclick="viewBill()">View Bill</button>
+  </div>
+
+  <script>
+    const specializations = [
+      {
+        name: "General Physician",
+        conditions: ["fever", "infections", "hypertension", "headaches"],
+        diagnostics: ["CBC", "Blood Sugar", "Urinalysis"],
+        medicines: ["Febrilin", "Infexol", "Tensiva"]
+      },
+      {
+        name: "Cardiologist",
+        conditions: ["heart diseases", "chest pain"],
+        diagnostics: ["ECG", "Echocardiogram", "Angiography"],
+        medicines: ["Cardiovex", "Angiostat", "Rhythmedol"]
+      },
+      {
+        name: "Dermatologist",
+        conditions: ["acne", "eczema", "fungal infections"],
+        diagnostics: ["Skin Scraping", "Biopsy", "Dermoscopy"],
+        medicines: ["Acnetin", "Fungocure", "Eczemol"]
+      },
+      {
+        name: "Gynecologist",
+        conditions: ["menstrual issues", "pregnancy", "pcod"],
+        diagnostics: ["Pelvic Ultrasound", "PAP Smear", "Hormone Tests"],
+        medicines: ["Gynovita", "Fertibol", "Prenasure"]
+      },
+      {
+        name: "Pediatrician",
+        conditions: ["child growth", "infections"],
+        diagnostics: ["Growth Charting", "CBC", "Developmental Screening"],
+        medicines: ["Growvax", "Infantol", "Chilvit"]
+      },
+      {
+        name: "Orthopedic Surgeon",
+        conditions: ["back pain", "fractures", "arthritis"],
+        diagnostics: ["X-rays", "MRI", "CT Scan (Bones)", "Bone Densitometry"],
+        medicines: ["Bonemend", "Arthrocin", "Flexogel"]
+      },
+      {
+        name: "Neurologist",
+        conditions: ["neurological disorder", "seizures", "stroke"],
+        diagnostics: ["MRI Brain", "CT", "EEG", "Nerve Conduction Test"],
+        medicines: ["Neurozil", "Migracure", "Cognitol"]
+      },
+      {
+        name: "Endocrinologist",
+        conditions: ["diabetes", "thyroid", "hormonal disorders"],
+        diagnostics: ["HbA1c", "Thyroid Profile (T3/T4/TSH)", "Insulin Levels"],
+        medicines: ["Glycostat", "Thyronil", "Insumix"]
+      },
+      {
+        name: "Pulmonologist",
+        conditions: ["asthma", "cough", "breathlessness", "pneumonia"],
+        diagnostics: ["Chest X-ray", "PFT", "Sputum Test", "CT Chest"],
+        medicines: ["Bronchicure", "Mucorid", "Pulmovent"]
+      },
+      {
+        name: "ENT Specialist",
+        conditions: ["ear pain", "sinusitis", "sore throat"],
+        diagnostics: ["Audiometry", "Nasal Endoscopy", "Tympanometry"],
+        medicines: ["Otoclear", "Nasalin", "Throacil"]
+      }
+    ];
+
+    const doctorNames = ["Mehta", "Kumar", "Sharma", "Varma", "Prem", "Reddy", "Joshna", "Shiva", "Vijay", "Rao"];
+    const dosages = ["1 tab", "2 tabs", "1 spoon"];
+    const frequencies = ["once a day", "twice a day", "after meals", "before sleep"];
+    const durations = ["for 5 days", "for 1 week", "for 10 days"];
+
+    let lastBillData = null; // store last generated bill to use in "View Bill" page
+
+    function randomChoice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function generateReport() {
+      const name = document.getElementById('name').value.trim();
+      const problemInput = document.getElementById('problem').value.trim().toLowerCase();
+      const age = document.getElementById('age').value.trim();
+      const op = document.getElementById('op').value.trim();
+      const date = document.getElementById('date').value.trim();
+      const output = document.getElementById('output');
+      const billTable = document.getElementById('billReceipt');
+      const viewBillBtn = document.getElementById('viewBillBtn');
+
+      output.innerText = "";
+      billTable.style.display = "none";
+      viewBillBtn.style.display = "none";
+      lastBillData = null;
+
+      if (!name || !problemInput || !age || !op || !date) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      let found = null;
+      for (const spec of specializations) {
+        if (spec.conditions.some(c => c.includes(problemInput))) {
+          found = spec;
+          break;
+        }
+      }
+
+      if (!found) {
+        output.innerText = "No matching specialization found.";
+        return;
+      }
+
+      const doctor = randomChoice(doctorNames);
+      let report = `Referred to Dr. ${doctor}  \nSpecialization: ${found.name}\n\n`;
+
+      report += "Diagnosis Report:\n";
+      for (const test of found.diagnostics) {
+        report += ` - ${test}\n`;
+      }
+
+      const meds = found.medicines;
+      const selectedMeds = meds.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * meds.length) + 1);
+      const prescription = [];
+
+      report += "\nPrescription:\n";
+      let totalCost = 0;
+
+      selectedMeds.forEach((med, i) => {
+        const dose = randomChoice(dosages);
+        const freq = randomChoice(frequencies);
+        const dur = randomChoice(durations);
+        const cost = Math.floor(Math.random() * 500) + 100;
+        const instructions = `${dose}, ${freq}, ${dur}`;
+        report += ` ${i + 1}. ${med} - ${instructions} (₹${cost})\n`;
+        prescription.push({ med, instructions, cost });
+        totalCost += cost;
+      });
+
+      const outcome = randomChoice(["Cured", "Medical Management", "Cured"]);
+      report += `\nOutcome: ${outcome}`;
+
+      const consultFee = 2000;
+
+      // Random GST between 0 and 5%
+      const gstPercent = +(Math.random() * 5).toFixed(2);
+
+      const subtotal = consultFee + totalCost;
+      const gstAmount = +(subtotal * (gstPercent / 100)).toFixed(2);
+      const totalBill = +(subtotal + gstAmount).toFixed(2);
+
+      if (outcome === "Cured") {
+        // Show only bill receipt in table
+        billTable.style.display = "table";
+        document.getElementById('consultFee').innerText = `₹${consultFee}`;
+        document.getElementById('medicineTotal').innerText = `₹${totalCost}`;
+        document.getElementById('gstPercent').innerText = gstPercent;
+        document.getElementById('gstAmount').innerText = `₹${gstAmount}`;
+        document.getElementById('totalBill').innerText = `₹${totalBill}`;
+
+        output.innerText = report.split("\n\nOutcome:")[0] + `\nOutcome: ${outcome}`;
+        viewBillBtn.style.display = "block";
+
+        // Store bill data for View Bill button
+        lastBillData = {
+          patientName: name,
+          opNumber: op,
+          date,
+          doctor,
+          specialization: found.name,
+          diagnosis: found.diagnostics,
+          prescription,
+          consultFee,
+          medicineTotal: totalCost,
+          gstPercent,
+          gstAmount,
+          totalBill,
+          outcome
+        };
+      } else {
+        output.innerText = report + `\nTreatment is ongoing. (Managing health, diagnosis, planning, and monitoring)`;
+      }
+
+      // Store patient in localStorage
+      const patientData = {
+        name, problem: problemInput, age, opNumber: parseInt(op, 10), date,
+        doctor, specialization: found.name,
+        outcome, medicines: prescription,
+        totalCost: totalBill
+      };
+
+      let storedPatients = JSON.parse(localStorage.getItem("patients") || "[]");
+      storedPatients.push(patientData);
+      localStorage.setItem("patients", JSON.stringify(storedPatients));
+    }
+
+    function showSavedPatients() {
+      const saved = JSON.parse(localStorage.getItem("patients") || "[]");
+      const table = document.getElementById("patientTable");
+      const tbody = table.querySelector("tbody");
+      tbody.innerHTML = "";
+
+      if (saved.length === 0) {
+        alert("No patient data stored.");
+        table.style.display = "none";
+        return;
+      }
+
+      // Sort by opNumber ascending
+      saved.sort((a, b) => a.opNumber - b.opNumber);
+
+      saved.forEach(patient => {
+        const row = `<tr>
+          <td>${patient.opNumber}</td>
+          <td>${patient.name}</td>
+          <td>${patient.problem}</td>
+          <td>${patient.age}</td>
+          <td>${patient.doctor}</td>
+          <td>${patient.specialization}</td>
+          <td>₹${patient.totalCost}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+
+      table.style.display = "table";
+    }
+
+    function clearPatients() {
+      if (confirm("Are you sure you want to delete all patient records?")) {
+        localStorage.removeItem("patients");
+        document.getElementById("patientTable").style.display = "none";
+        alert("All stored patient data cleared.");
+      }
+    }
+
+    // Opens a new window to show the detailed bill receipt
+    function viewBill() {
+      if (!lastBillData) {
+        alert("No bill data available.");
+        return;
+      }
+
+      const billWindow = window.open("", "BillReceipt", "width=600,height=700,scrollbars=yes");
+      billWindow.document.write(`
+        <html>
+          <head>
+            <title>Bill Receipt for ${lastBillData.patientName}</title>
+            <style>
+              body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #f4f6f8;
+                padding: 30px;
+                color: #2c3e50;
+              }
+              .bill-container {
+                background: white;
+                max-width: 550px;
+                margin: auto;
+                padding: 25px;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+              }
+              h1 {
+                text-align: center;
+                color: #28a745;
+                margin-bottom: 30px;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 25px;
+              }
+              th, td {
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: left;
+                font-size: 16px;
+              }
+              th {
+                background-color: #28a745;
+                color: white;
+                font-weight: 600;
+              }
+              td.cost {
+                text-align: right;
+                font-weight: 600;
+              }
+              .section-title {
+                font-weight: 700;
+                font-size: 18px;
+                margin-top: 25px;
+                margin-bottom: 10px;
+                border-bottom: 2px solid #28a745;
+                padding-bottom: 5px;
+              }
+              .footer {
+                text-align: center;
+                font-size: 14px;
+                color: #888;
+                margin-top: 30px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="bill-container">
+              <h1>Vidyashyala Multispeciality National Hospital Bill Receipt </h1>
+			  
+              <p><strong>Patient Name:</strong> ${lastBillData.patientName}</p>
+              <p><strong>OP Number:</strong> ${lastBillData.opNumber}</p>
+              <p><strong>Date:</strong> ${lastBillData.date}</p>
+              <p><strong>Doctor:</strong> Dr. ${lastBillData.doctor} (${lastBillData.specialization})</p>
+
+              <div class="section-title">Diagnosis Tests</div>
+              <ul>
+                ${lastBillData.diagnosis.map(test => `<li>${test}</li>`).join('')}
+              </ul>
+
+              <div class="section-title">Prescription</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Medicine</th>
+                    <th>Instructions</th>
+                    <th>Cost (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${lastBillData.prescription.map(med => `
+                    <tr>
+                      <td>${med.med}</td>
+                      <td>${med.instructions}</td>
+                      <td class="cost">${med.cost}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+
+              <table>
+                <tbody>
+                  <tr>
+                    <td><strong>Consultation Fee</strong></td>
+                    <td class="cost">₹${lastBillData.consultFee}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Medicine Total</strong></td>
+                    <td class="cost">₹${lastBillData.medicineTotal}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>GST (${lastBillData.gstPercent}%)</strong></td>
+                    <td class="cost">₹${lastBillData.gstAmount}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>TOTAL BILL</strong></td>
+                    <td class="cost">₹${lastBillData.totalBill}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <p><strong>Outcome:</strong> ${lastBillData.outcome}</p>
+
+              <div class="footer">Thank you for visiting our hospital. Get well soon!</div>
+            </div>
+          </body>
+        </html>
+      `);
+
+      billWindow.document.close();
+    }
+  </script>
+</body>
+</html>
